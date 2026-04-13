@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.log
+public/archive/
+data/
+
+# SSL certificates
+certs/

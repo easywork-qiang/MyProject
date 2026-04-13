@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 调用统计 - RC Assist 管理后台</title>
+    <link rel="stylesheet" href="/admin/css/style.css">
+    <script src="/admin/js/vendor/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app-container">
+    <%- include('layout') %>
+    <main class="main-content">
+        <div class="page-header">
+            <h1>🤖 AI 调用统计</h1>
+            <div class="chart-actions">
+                <button class="btn btn-sm active" onclick="loadApiStats('today', this)">今日</button>
+                <button class="btn btn-sm" onclick="loadApiStats('week', this)">本周</button>
+                <button class="btn btn-sm" onclick="loadApiStats('month', this)">本月</button>
+            </div>
+        </div>
+
+        <div class="stats-cards" id="apiOverview">
+            <div class="stat-card"><div class="stat-icon">📞</div><div class="stat-info"><div class="stat-value" id="totalCalls">-</div><div class="stat-label">总调用次数</div></div></div>
+            <div class="stat-card stat-card-danger"><div class="stat-icon">❌</div><div class="stat-info"><div class="stat-value" id="errorRate">-</div><div class="stat-label">错误率</div></div></div>
+            <div class="stat-card stat-card-info"><div class="stat-icon">⏱️</div><div class="stat-info"><div class="stat-value" id="avgDuration">-</div><div class="stat-label">平均耗时</div></div></div>
+            <div class="stat-card stat-card-warning"><div class="stat-icon">⚠️</div><div class="stat-info"><div class="stat-value" id="errorCount">-</div><div class="stat-label">错误次数</div></div></div>
+        </div>
+
+        <div class="chart-grid">
+            <div class="card chart-card">
+                <div class="card-header"><h3>📈 调用趋势</h3></div>
+                <div class="card-body"><canvas id="apiTrendChart" height="200"></canvas></div>
+            </div>
+            <div class="card chart-card">
+                <div class="card-header"><h3>📊 按接口分类</h3></div>
+                <div class="card-body"><canvas id="apiEndpointChart" height="200"></canvas></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3>🏆 用户调用排行 (Top 10)</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>排名</th><th>用户 ID</th><th>调用次数</th></tr></thead>
+                    <tbody id="userRankBody"><tr><td colspan="3" class="text-center text-muted">加载中...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+<script>
+let apiTrendChart, apiEndpointChart;
+
+async function loadApiStats(period, btn) {
+    if (btn) {
+        btn.parentElement.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    const res = await fetch('/admin/api/stats/api-usage?period=' + (period || 'today'));
+    const data = await res.json();
+
+    document.getElementById('totalCalls').textContent = data.totalCalls;
+    document.getElementById('errorRate').textContent = data.errorRate + '%';
+    document.getElementById('avgDuration').textContent = Math.round(data.avgDuration) + 'ms';
+    document.getElementById('errorCount').textContent = data.errorCount;
+
+    // 趋势图
+    if (apiTrendChart) apiTrendChart.destroy();
+    const trendCtx = document.getElementById('apiTrendChart').getContext('2d');
+    apiTrendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: data.trend.map(t => t.date),
+            datasets: [{ label: '调用次数', data: data.trend.map(t => t.count), borderColor: '#6c5ce7', backgroundColor: 'rgba(108,92,231,0.1)', fill: true, tension: 0.3 }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    // 接口分布图
+    if (apiEndpointChart) apiEndpointChart.destroy();
+    const epCtx = document.getElementById('apiEndpointChart').getContext('2d');
+    apiEndpointChart = new Chart(epCtx, {
+        type: 'doughnut',
+        data: {
+            labels: data.byEndpoint.map(e => e.endpoint),
+            datasets: [{ data: data.byEndpoint.map(e => e.count), backgroundColor: ['#6c5ce7', '#00cec9', '#fdcb6e', '#e17055', '#74b9ff', '#a29bfe'] }]
+        },
+        options: { responsive: true }
+    });
+
+    // 用户排行
+    const tbody = document.getElementById('userRankBody');
+    if (data.byUser.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">暂无数据</td></tr>';
+    } else {
+        tbody.innerHTML = data.byUser.map((u, i) => `<tr><td>${i + 1}</td><td>${u.user_id}</td><td>${u.count}</td></tr>`).join('');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => loadApiStats('today'));
+</script>
+</body>
+</html>

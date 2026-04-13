@@ -1,0 +1,25 @@
+# 依赖 & 构建产物
+node_modules
+npm-debug.log*
+
+# 环境与敏感文件
+.env
+.env.*
+certs/
+
+# 运行时数据（外挂卷提供）
+data/
+public/
+
+# 日志
+*.log
+
+# 开发文件
+.git
+.gitignore
+README.md
+API-DOC.md
+FEATURE-SPEC.md
+Dockerfile
+.dockerignore
+scripts/

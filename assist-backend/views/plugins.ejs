@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>插件管理 - RC Assist 管理后台</title>
+    <link rel="stylesheet" href="/admin/css/style.css">
+    <style>
+        .btn-group { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: #fff; border-radius: 12px; padding: 24px; max-width: 560px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .version-current { background: rgba(0,184,148,0.1); }
+        .version-current td { font-weight: 600; }
+        .badge-new-version { background: #e17055; color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; animation: pulse-badge 2s infinite; }
+        @keyframes pulse-badge { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .size-cell { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <%- include('layout') %>
+    <main class="main-content">
+        <div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h1>🧩 插件管理</h1>
+            <button class="btn btn-primary" id="publishAllBtn" onclick="publishAll()">
+                🔄 扫描归档并发布
+            </button>
+        </div>
+
+        <!-- 核心组件 -->
+        <div class="card">
+            <div class="card-header"><h3>🔧 核心组件</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>组件 ID</th><th>Core Key</th><th>当前版本</th><th>文件</th><th>操作</th></tr></thead>
+                    <tbody>
+                        <% Object.keys(manifest.core || {}).forEach(function(key) { var c = manifest.core[key]; var coreId = key.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, ''); var latestCore = (latestArchiveVersions.core || {})[coreId]; %> 
+                        <tr>
+                            <td><strong><%= coreId %></strong></td>
+                            <td><code><%= key %></code></td>
+                            <td>
+                                <span class="badge badge-success"><%= c.version %></span>
+                                <% if (latestCore && latestCore.version !== c.version) { %>
+                                <span class="badge-new-version" title="归档中有新版本 v<%= latestCore.version %>">有新版本</span>
+                                <% } %>
+                            </td>
+                            <td><code><%= c.file %></code></td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm" onclick="showCoreVersions('<%= coreId %>', '<%= c.version %>')">版本</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteCoreComponent('<%= coreId %>')">移除</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% if (Object.keys(manifest.core || {}).length === 0) { %>
+                        <tr><td colspan="5" class="text-center text-muted">暂无核心组件</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 插件列表 -->
+        <div class="card">
+            <div class="card-header"><h3>插件列表</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>插件 ID</th><th>名称</th><th>当前版本</th><th>格式</th><th>大小</th><th>操作</th></tr></thead>
+                    <tbody>
+                        <% (manifest.plugins || []).forEach(function(p) { var latestPlugin = (latestArchiveVersions.plugins || {})[p.id]; %>
+                        <tr>
+                            <td><strong><%= p.id %></strong></td>
+                            <td><%= p.name || p.id %></td>
+                            <td>
+                                <span class="badge badge-success"><%= p.version %></span>
+                                <% if (latestPlugin && latestPlugin.version !== p.version) { %>
+                                <span class="badge-new-version" title="归档中有新版本 v<%= latestPlugin.version %>">有新版本</span>
+                                <% } %>
+                            </td>
+                            <td>
+                                <% if (p.format === 'zip') { %>
+                                <span class="badge" style="background:#2d7d46;color:#fff;" title="<%= (p.files || []).join(', ') %>">📦 ZIP</span>
+                                <% } else { %>
+                                <span class="badge" style="background:#555;color:#fff;">JS</span>
+                                <% } %>
+                            </td>
+                            <td class="size-cell">
+                                <% var size = pluginSizes[p.id]; %>
+                                <% if (size) { %>
+                                    <% if (size < 1024) { %>
+                                    <%= size %> B
+                                    <% } else if (size < 1024 * 1024) { %>
+                                    <%= (size / 1024).toFixed(1) %> KB
+                                    <% } else { %>
+                                    <%= (size / 1024 / 1024).toFixed(2) %> MB
+                                    <% } %>
+                                <% } else { %>
+                                <span class="text-muted">-</span>
+                                <% } %>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm" onclick="showVersions('<%= p.id %>', '<%= p.version %>')">版本</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deletePlugin('<%= p.id %>')">移除</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% if ((manifest.plugins || []).length === 0) { %>
+                        <tr><td colspan="6" class="text-center text-muted">暂无插件</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 版本管理弹窗（插件） -->
+        <div class="modal" id="versionModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>📦 版本管理 - <span id="versionPluginId"></span></h3>
+                    <button class="btn btn-sm" onclick="closeModal()">✕</button>
+                </div>
+                <div class="modal-body" id="versionBody">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 版本管理弹窗（核心组件） -->
+        <div class="modal" id="coreVersionModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🔧 核心组件版本管理 - <span id="coreVersionId"></span></h3>
+                    <button class="btn btn-sm" onclick="closeCoreModal()">✕</button>
+                </div>
+                <div class="modal-body" id="coreVersionBody">加载中...</div>
+            </div>
+        </div>
+    </main>
+</div>
+<script>
+
+function formatChinaTime(val) {
+    if (!val) return '';
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return val;
+    return d.toLocaleString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false,
+    }).replace(/\//g, '-');
+}
+
+// ==================== 插件版本管理 ====================
+
+let currentPluginVersion = '';
+
+function showVersions(pluginId, currentVersion) {
+    currentPluginVersion = currentVersion;
+    document.getElementById('versionPluginId').textContent = pluginId;
+    document.getElementById('versionModal').style.display = 'flex';
+    document.getElementById('versionBody').innerHTML = '加载中...';
+
+    fetch('/admin/api/plugins/' + pluginId + '/archive')
+        .then(r => r.json())
+        .then(files => {
+            if (files.length === 0) {
+                document.getElementById('versionBody').innerHTML =
+                    '<p>当前版本: <span class="badge badge-success">' + currentVersion + '</span></p>' +
+                    '<p class="text-muted">暂无历史版本</p>';
+                return;
+            }
+
+            let html = '<p style="margin-bottom:12px;">当前发布版本: <span class="badge badge-success">' + currentVersion + '</span></p>';
+            html += '<table class="table"><thead><tr><th>版本</th><th>格式</th><th>大小</th><th>上传时间</th><th>操作</th></tr></thead><tbody>';
+            html += files.map(function(f) {
+                const isCurrent = f.version === currentVersion;
+                const rowClass = isCurrent ? 'version-current' : '';
+                const actionBtn = isCurrent
+                    ? '<span class="badge badge-success">当前版本</span>'
+                    : '<button class="btn btn-sm btn-primary" onclick="publishVersion(\'' + pluginId + '\',\'' + f.version + '\')">发布</button>';
+                return '<tr class="' + rowClass + '"><td>' + f.version + '</td><td>' + (f.format === 'zip' ? '📦 ZIP' : 'JS') + '</td><td>' + (f.size / 1024).toFixed(1) + ' KB</td><td>' + formatChinaTime(f.modifiedAt) + '</td><td>' + actionBtn + '</td></tr>';
+            }).join('');
+            html += '</tbody></table>';
+
+            document.getElementById('versionBody').innerHTML = html;
+        })
+        .catch(function(err) {
+            document.getElementById('versionBody').innerHTML = '<p class="text-muted">加载失败: ' + err.message + '</p>';
+        });
+}
+
+function publishVersion(pluginId, version) {
+    if (!confirm('确定要将 ' + pluginId + ' 发布为 v' + version + ' 吗？所有客户端将同步此版本。')) return;
+    fetch('/admin/api/plugins/' + pluginId + '/rollback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version })
+    }).then(r => r.json()).then(data => {
+        if (data.ok) { alert('✅ 已发布 v' + version); location.reload(); }
+        else alert('发布失败: ' + data.error);
+    });
+}
+
+function deletePlugin(pluginId) {
+    if (!confirm('确定要从 manifest 中移除插件 ' + pluginId + ' 吗？')) return;
+    fetch('/admin/api/plugins/' + pluginId, { method: 'DELETE' })
+        .then(r => r.json()).then(data => {
+            if (data.message) { alert('移除成功'); location.reload(); }
+            else alert('移除失败: ' + data.error);
+        });
+}
+
+function closeModal() {
+    document.getElementById('versionModal').style.display = 'none';
+}
+
+// ==================== 核心组件版本管理 ====================
+
+let currentCoreVersion = '';
+
+function showCoreVersions(coreId, currentVersion) {
+    currentCoreVersion = currentVersion;
+    document.getElementById('coreVersionId').textContent = coreId;
+    document.getElementById('coreVersionModal').style.display = 'flex';
+    document.getElementById('coreVersionBody').innerHTML = '加载中...';
+
+    fetch('/admin/api/core/' + coreId + '/archive')
+        .then(r => r.json())
+        .then(files => {
+            if (files.length === 0) {
+                document.getElementById('coreVersionBody').innerHTML =
+                    '<p>当前版本: <span class="badge badge-success">' + currentVersion + '</span></p>' +
+                    '<p class="text-muted">暂无历史版本</p>';
+                return;
+            }
+
+            let html = '<p style="margin-bottom:12px;">当前发布版本: <span class="badge badge-success">' + currentVersion + '</span></p>';
+            html += '<table class="table"><thead><tr><th>版本</th><th>大小</th><th>上传时间</th><th>操作</th></tr></thead><tbody>';
+            html += files.map(function(f) {
+                const isCurrent = f.version === currentVersion;
+                const rowClass = isCurrent ? 'version-current' : '';
+                const actionBtn = isCurrent
+                    ? '<span class="badge badge-success">当前版本</span>'
+                    : '<button class="btn btn-sm btn-primary" onclick="publishCoreVersion(\'' + coreId + '\',\'' + f.version + '\')">发布</button>';
+                return '<tr class="' + rowClass + '"><td>' + f.version + '</td><td>' + (f.size / 1024).toFixed(1) + ' KB</td><td>' + formatChinaTime(f.modifiedAt) + '</td><td>' + actionBtn + '</td></tr>';
+            }).join('');
+            html += '</tbody></table>';
+
+            document.getElementById('coreVersionBody').innerHTML = html;
+        })
+        .catch(function(err) {
+            document.getElementById('coreVersionBody').innerHTML = '<p class="text-muted">加载失败: ' + err.message + '</p>';
+        });
+}
+
+function publishCoreVersion(coreId, version) {
+    if (!confirm('确定要将核心组件 ' + coreId + ' 发布为 v' + version + ' 吗？客户端重启后将同步此版本。')) return;
+    fetch('/admin/api/core/' + coreId + '/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version })
+    }).then(r => r.json()).then(data => {
+        if (data.ok) { alert('✅ 核心组件已发布 v' + version); location.reload(); }
+        else alert('发布失败: ' + (data.error || '未知错误'));
+    });
+}
+
+function deleteCoreComponent(coreId) {
+    if (!confirm('确定要从 manifest 中移除核心组件 ' + coreId + ' 吗？')) return;
+    fetch('/admin/api/core/' + coreId, { method: 'DELETE' })
+        .then(r => r.json()).then(data => {
+            if (data.message) { alert('移除成功'); location.reload(); }
+            else alert('移除失败: ' + (data.error || '未知错误'));
+        });
+}
+
+function closeCoreModal() {
+    document.getElementById('coreVersionModal').style.display = 'none';
+}
+
+// ==================== 批量发布 ====================
+
+function publishAll() {
+    if (!confirm('将扫描归档目录，自动发布所有组件和插件的最新版本到 manifest。\n确定继续？')) return;
+    const btn = document.getElementById('publishAllBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ 发布中...';
+
+    fetch('/admin/api/publish-all', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                let msg = '✅ 批量发布完成！\n\n';
+                if (data.core.length) msg += '核心组件 (' + data.core.length + '):\n' + data.core.map(c => '  • ' + c.id + ' v' + c.version).join('\n') + '\n\n';
+                if (data.plugins.length) msg += '插件 (' + data.plugins.length + '):\n' + data.plugins.map(p => '  • ' + p.id + ' v' + p.version).join('\n') + '\n\n';
+                if (data.errors && data.errors.length) msg += '⚠️ 失败 (' + data.errors.length + '):\n' + data.errors.map(e => '  • ' + e.id + ': ' + e.error).join('\n');
+                if (!data.core.length && !data.plugins.length) msg += '归档目录为空，没有可发布的内容。';
+                alert(msg);
+                if (data.core.length || data.plugins.length) location.reload();
+            } else {
+                alert('发布失败: ' + (data.error || '未知错误'));
+            }
+            btn.disabled = false;
+            btn.textContent = '🔄 扫描归档并发布';
+        })
+        .catch(err => {
+            alert('请求失败: ' + err.message);
+            btn.disabled = false;
+            btn.textContent = '🔄 扫描归档并发布';
+        });
+}
+</script>
+</body>
+</html>

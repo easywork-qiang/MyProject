@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>插件管理中心</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>rongcloud-assist 中心</h1>
+            <p>为「新点即时通讯插件系统」提供强力支撑，实现 AI 赋能与插件化扩展。</p>
+        </header>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🚀</div>
+                <h3 class="feature-title">无缝插件集成</h3>
+                <p class="feature-desc">一键注入原生应用，支持动态热更新与静默升级。</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🧠</div>
+                <h3 class="feature-title">AI 增强赋能</h3>
+                <p class="feature-desc">提供群聊智能总结、备忘录生成以及工作日志提取。</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡️</div>
+                <h3 class="feature-title">跨平台全覆盖</h3>
+                <p class="feature-desc">完美兼容 Windows 及 macOS (Intel/Apple Silicon)。</p>
+            </div>
+        </div>
+
+        <section class="install-section">
+            <h2>一键安装指南</h2>
+
+            <div class="os-tabs">
+                <button class="os-tab active" data-target="windows">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M0,3.444l10.049-1.393v9.062L0,11.01V3.444z M0,20.088l10.049,1.353V12.16 L0,12.057V20.088z M11.139,21.685L24,23.535V12.214l-12.861-0.12V21.685z M11.139,11.164L24,11.028V0l-12.861,1.748L11.139,11.164z" />
+                    </svg>
+                    Windows
+                </button>
+                <button class="os-tab" data-target="macos">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.178 15.65c-.147-.03-2.616-.549-3.178-2.65-.562 2.1-3.03 2.62-3.178 2.65-.008.002-.016.002-.022.002-.093 0-.181-.054-.222-.143-.058-.124.015-.27.144-.311.15-.03 2.174-.474 2.61-2.12-.436-1.646-2.46-2.09-2.61-2.12-.13-.041-.202-.187-.144-.311.057-.124.204-.186.331-.13.15.03 2.616.549 3.178 2.65.562-2.1 3.03-2.62 3.178-2.65.127-.056.274.006.331.13.058.124-.014.27-.144.311-.15.03-2.174.474-2.61 2.12.436 1.646 2.46 2.09 2.61 2.12.13.041.202.187.144.311.041.089.129.143.222.143.006 0 .014 0 .022-.002zM12 9c-1.657 0-3-1.343-3-3s1.343-3 3-3 3 1.343 3 3-1.343 3-3 3z" />
+                    </svg>
+                    macOS
+                </button>
+            </div>
+
+            <!-- Windows Install -->
+            <div id="windows" class="install-content active">
+                <ul class="step-list">
+                    <li>打开 <strong>Windows PowerShell</strong>（建议以管理员身份运行）。</li>
+                    <li>复制并粘贴以下命令，然后按回车执行。</li>
+                </ul>
+                <div class="code-block-wrapper">
+                    <button class="copy-btn" data-target="win-cmd">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                                d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z">
+                            </path>
+                            <path
+                                d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z">
+                            </path>
+                        </svg>
+                        Copy
+                    </button>
+                    <div class="code-block"><code
+                            id="win-cmd">irm '<span class="dynamic-url">http://localhost:8080</span>/scripts/install.ps1'|iex</code>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 1rem;">
+                    <strong>如何卸载：</strong> 再次运行相同的脚本，但在环境变量中设置卸载动作或添加 uninstall 参数。
+                </p>
+                <div class="code-block-wrapper" style="margin-top: 0.5rem;">
+                    <button class="copy-btn" data-target="win-uncmd">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                                d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z">
+                            </path>
+                            <path
+                                d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z">
+                            </path>
+                        </svg>
+                        Copy
+                    </button>
+                    <div class="code-block"><code
+                            id="win-uncmd">$env:RC_ACTION='uninstall';irm '<span class="dynamic-url">http://localhost:8080</span>/scripts/install.ps1'|iex</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- macOS Install -->
+            <div id="macos" class="install-content">
+                <ul class="step-list">
+                    <li>打开 <strong>终端 (Terminal)</strong> 应用程序。</li>
+                    <li>复制并粘贴以下命令，然后按回车执行。脚本会自动识别系统架构。</li>
+                </ul>
+                <div class="code-block-wrapper">
+                    <button class="copy-btn" data-target="mac-cmd">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                                d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z">
+                            </path>
+                            <path
+                                d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z">
+                            </path>
+                        </svg>
+                        Copy
+                    </button>
+                    <div class="code-block"><code
+                            id="mac-cmd">curl -kfsSL <span class="dynamic-url">http://localhost:8080</span>/scripts/install.sh | bash</code>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 1rem;">
+                    <strong>如何卸载：</strong>使用相同命令，但在后面加上 <code>-s -- uninstall</code> 参数。
+                </p>
+                <div class="code-block-wrapper" style="margin-top: 0.5rem;">
+                    <button class="copy-btn" data-target="mac-uncmd">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                                d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z">
+                            </path>
+                            <path
+                                d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z">
+                            </path>
+                        </svg>
+                        Copy
+                    </button>
+                    <div class="code-block"><code
+                            id="mac-uncmd">curl -kfsSL <span class="dynamic-url">http://localhost:8080</span>/scripts/install.sh | bash -s -- uninstall</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+
+</html>

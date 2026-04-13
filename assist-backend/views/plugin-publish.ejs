@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推送插件 - RC Assist 管理后台</title>
+    <link rel="stylesheet" href="/admin/css/style.css">
+    <style>
+        .zip-info {
+            background: #f0f7f4;
+            border: 1px solid #2d7d46;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-top: 8px;
+            font-size: 13px;
+            display: none;
+        }
+        .zip-info .info-header {
+            font-weight: 600;
+            color: #2d7d46;
+            margin-bottom: 8px;
+        }
+        .zip-info .info-item {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .zip-info .info-label {
+            color: #666;
+            min-width: 80px;
+        }
+        .zip-info .info-value {
+            color: #333;
+            font-family: monospace;
+        }
+        .zip-info .file-list {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #ddd;
+        }
+        .zip-info .file-list code {
+            display: inline-block;
+            background: #e8f5e9;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin: 2px 4px 2px 0;
+            font-size: 12px;
+        }
+        .auto-filled {
+            border-color: #2d7d46 !important;
+            background: #f9fef9 !important;
+        }
+        .update-hint {
+            display: inline-block;
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-left: 12px;
+        }
+        .parsing-indicator {
+            display: none;
+            color: #666;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+        .parsing-indicator.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <%- include('layout') %>
+    <main class="main-content">
+        <div class="page-header">
+            <h1>📤 推送插件 <span id="updateHint" class="update-hint" style="display:none;"></span></h1>
+            <a href="/admin/plugins" class="btn btn-sm">← 返回列表</a>
+        </div>
+        <div style="margin-bottom:16px;padding:10px 16px;background:#fff3cd;border-radius:6px;color:#856404;font-size:13px;">
+            💡 推送后插件不会立即生效，需要在 <a href="/admin/plugins" style="color:#0c5460;font-weight:600;">插件管理</a> 页手动选择版本发布。
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form id="publishForm" enctype="multipart/form-data">
+                    <!-- 先放文件上传，方便自动解析 -->
+                    <div class="form-group">
+                        <label>上传文件 (.zip 或 .js) *</label>
+                        <input type="file" name="file" id="fileInput" accept=".zip,.js" class="form-input" required>
+                        <small class="text-muted">插件推荐使用 .zip 格式（包含 main.js 及附属文件），核心组件使用 .js 格式。<br>📦 上传 ZIP 后将自动解析 manifest.json / package.json 中的基本信息。</small>
+                        <div class="parsing-indicator" id="parsingIndicator">⏳ 正在解析 ZIP 内容...</div>
+                        <div class="zip-info" id="zipInfo">
+                            <div class="info-header">📦 ZIP 解析结果 <span id="zipSource" style="font-weight:normal;color:#999;font-size:12px;"></span></div>
+                            <div id="zipMeta"></div>
+                            <div class="file-list" id="zipFiles"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>类型 *</label>
+                            <select name="type" id="typeSelect" class="form-input" required>
+                                <option value="plugin">插件 (plugin)</option>
+                                <option value="core">核心组件 (core)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>ID *</label>
+                            <input type="text" name="id" id="idInput" class="form-input" placeholder="如: ai-memo" required>
+                        </div>
+                        <div class="form-group">
+                            <label>版本号 *</label>
+                            <input type="text" name="version" id="versionInput" class="form-input" placeholder="如: 1.0.0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>显示名称</label>
+                            <input type="text" name="name" id="nameInput" class="form-input" placeholder="插件名称">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>描述</label>
+                        <textarea name="description" id="descInput" class="form-input" rows="2" placeholder="插件描述"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>更新日志</label>
+                        <textarea name="changelog" id="changelogInput" class="form-input" rows="3" placeholder="本次更新内容"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">推送</button>
+                    </div>
+                </form>
+                <div id="publishResult" style="display:none;margin-top:16px;"></div>
+            </div>
+        </div>
+    </main>
+</div>
+<script>
+// ======================== URL 参数预填 ========================
+const params = new URLSearchParams(window.location.search);
+const isUpdate = !!params.get('id');
+
+if (params.get('type')) document.getElementById('typeSelect').value = params.get('type');
+if (params.get('id')) {
+    document.getElementById('idInput').value = params.get('id');
+    document.getElementById('idInput').readOnly = true;
+    document.getElementById('idInput').classList.add('auto-filled');
+}
+if (params.get('name')) document.getElementById('nameInput').value = decodeURIComponent(params.get('name'));
+if (params.get('description')) document.getElementById('descInput').value = decodeURIComponent(params.get('description'));
+
+if (isUpdate) {
+    document.getElementById('updateHint').textContent = '🔄 更新: ' + params.get('id');
+    document.getElementById('updateHint').style.display = 'inline-block';
+    document.getElementById('submitBtn').textContent = '推送更新';
+}
+
+// ======================== ZIP 文件自动解析 ========================
+document.getElementById('fileInput').addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
+
+    const zipInfoEl = document.getElementById('zipInfo');
+    const indicator = document.getElementById('parsingIndicator');
+
+    // 非 ZIP 文件不解析
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+        zipInfoEl.style.display = 'none';
+        return;
+    }
+
+    // 显示加载指示
+    indicator.classList.add('active');
+    zipInfoEl.style.display = 'none';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/admin/api/parse-zip', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json();
+        indicator.classList.remove('active');
+
+        if (!res.ok) {
+            console.warn('ZIP 解析失败:', data.error);
+            return;
+        }
+
+        // 显示解析结果
+        zipInfoEl.style.display = 'block';
+        document.getElementById('zipSource').textContent = '(来源: ' + data.source + ')';
+
+        // 元信息
+        let metaHtml = '';
+        if (data.id) metaHtml += '<div class="info-item"><span class="info-label">ID:</span><span class="info-value">' + data.id + '</span></div>';
+        if (data.name) metaHtml += '<div class="info-item"><span class="info-label">名称:</span><span class="info-value">' + data.name + '</span></div>';
+        if (data.version) metaHtml += '<div class="info-item"><span class="info-label">版本:</span><span class="info-value">' + data.version + '</span></div>';
+        if (data.description) metaHtml += '<div class="info-item"><span class="info-label">描述:</span><span class="info-value">' + data.description + '</span></div>';
+        if (data.changelog) metaHtml += '<div class="info-item"><span class="info-label">更新日志:</span><span class="info-value">' + data.changelog + '</span></div>';
+        document.getElementById('zipMeta').innerHTML = metaHtml || '<div class="text-muted">未提取到元信息</div>';
+
+        // 文件列表
+        if (data.files && data.files.length > 0) {
+            document.getElementById('zipFiles').innerHTML = '<strong>包含文件:</strong><br>' + data.files.map(f => '<code>' + f + '</code>').join(' ');
+        }
+
+        // 自动填充表单（仅当字段为空或非更新模式下的 id）
+        function autoFill(inputId, value) {
+            if (!value) return;
+            const input = document.getElementById(inputId);
+            if (!input.readOnly && !input.value) {
+                input.value = value;
+                input.classList.add('auto-filled');
+            }
+        }
+
+        autoFill('idInput', data.id);
+        autoFill('versionInput', data.version);
+        autoFill('nameInput', data.name);
+        autoFill('descInput', data.description);
+        autoFill('changelogInput', data.changelog);
+
+    } catch (err) {
+        indicator.classList.remove('active');
+        console.warn('ZIP 解析请求失败:', err);
+    }
+});
+
+// ======================== 表单提交 ========================
+document.getElementById('publishForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const resultEl = document.getElementById('publishResult');
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '推送中...';
+
+    try {
+        const res = await fetch('/admin/api/publish', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (res.ok) {
+            resultEl.className = 'alert alert-success';
+            resultEl.textContent = '✅ ' + data.message;
+            if (data.isNew === false) {
+                resultEl.textContent += ' (已更新版本)';
+            }
+        } else {
+            resultEl.className = 'alert alert-error';
+            resultEl.textContent = '❌ ' + data.error;
+        }
+        resultEl.style.display = 'block';
+    } catch(err) {
+        resultEl.className = 'alert alert-error';
+        resultEl.textContent = '❌ 推送失败: ' + err.message;
+        resultEl.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = isUpdate ? '推送更新' : '推送';
+    }
+});
+</script>
+</body>
+</html>

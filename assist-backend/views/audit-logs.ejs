@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审计日志 - RC Assist 管理后台</title>
+    <link rel="stylesheet" href="/admin/css/style.css">
+</head>
+<body>
+<div class="app-container">
+    <%- include('layout') %>
+    <main class="main-content">
+        <div class="page-header">
+            <h1>📋 审计日志</h1>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="filter-bar">
+                    <select id="actionFilter" class="form-input">
+                        <option value="">全部操作</option>
+                        <option value="login">登录</option>
+                        <option value="login_failed">登录失败</option>
+                        <option value="logout">登出</option>
+                        <option value="publish">发布</option>
+                        <option value="rollback">回滚</option>
+                    </select>
+                    <input type="date" id="startDate" class="form-input">
+                    <input type="date" id="endDate" class="form-input">
+                    <button class="btn btn-primary" onclick="loadLogs()">筛选</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr><th>时间</th><th>操作</th><th>对象</th><th>操作者</th><th>IP</th><th>详情</th></tr>
+                    </thead>
+                    <tbody id="logsBody">
+                        <tr><td colspan="6" class="text-center text-muted">加载中...</td></tr>
+                    </tbody>
+                </table>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+    </main>
+</div>
+<script>
+function formatChinaTime(val) {
+    if (!val) return '';
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return val;
+    return d.toLocaleString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false,
+    }).replace(/\//g, '-');
+}
+let currentPage = 1;
+
+async function loadLogs(page) {
+    currentPage = page || 1;
+    const params = new URLSearchParams({
+        page: currentPage, pageSize: 20,
+        action: document.getElementById('actionFilter').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+    });
+    const res = await fetch('/admin/api/audit-logs?' + params);
+    const data = await res.json();
+    const tbody = document.getElementById('logsBody');
+
+    if (data.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">暂无日志</td></tr>';
+    } else {
+        tbody.innerHTML = data.items.map(log => `
+            <tr>
+                <td>${formatChinaTime(log.created_at)}</td>
+                <td><span class="badge badge-info">${log.action}</span></td>
+                <td>${log.target || '-'}</td>
+                <td>${log.operator}</td>
+                <td>${log.ip_address || '-'}</td>
+                <td>${log.detail ? '<code>' + JSON.stringify(log.detail).substring(0, 60) + '</code>' : '-'}</td>
+            </tr>
+        `).join('');
+    }
+
+    // 分页
+    const el = document.getElementById('pagination');
+    if (data.totalPages <= 1) { el.innerHTML = ''; return; }
+    let html = `<span class="text-muted">共 ${data.total} 条</span> `;
+    for (let i = 1; i <= Math.min(data.totalPages, 10); i++) {
+        html += `<button class="btn btn-sm ${i === data.page ? 'active' : ''}" onclick="loadLogs(${i})">${i}</button> `;
+    }
+    el.innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', () => loadLogs());
+</script>
+</body>
+</html>
